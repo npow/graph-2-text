@@ -209,11 +209,12 @@ class Trainer(object):
 
         stats = Statistics()
 
+        device = next(self.model.parameters())[0].device
         for batch in valid_iter:
             cur_dataset = valid_iter.get_cur_dataset()
             self.valid_loss.cur_dataset = cur_dataset
 
-            src = onmt.io.make_features(batch, 'src', self.data_type)
+            src = onmt.io.make_features(batch, 'src', self.data_type).to(device)
             if self.data_type == 'text':
                 _, src_lengths = batch.src
             elif self.data_type == 'gcn':
@@ -226,7 +227,7 @@ class Trainer(object):
             else:
                 src_lengths = None
 
-            tgt = onmt.io.make_features(batch, 'tgt')
+            tgt = onmt.io.make_features(batch, 'tgt').to(device)
 
             # F-prop through the model.
             if self.data_type == 'gcn':
@@ -308,7 +309,8 @@ class Trainer(object):
                 trunc_size = target_size
 
             dec_state = None
-            src = onmt.io.make_features(batch, 'src', self.data_type)
+            device = next(self.model.parameters())[0].device
+            src = onmt.io.make_features(batch, 'src', self.data_type).to(device)
             if self.data_type == 'text':
                 _, src_lengths = batch.src
                 report_stats.n_src_words += src_lengths.sum()
@@ -327,7 +329,7 @@ class Trainer(object):
             else:
                 src_lengths = None
 
-            tgt_outer = onmt.io.make_features(batch, 'tgt')
+            tgt_outer = onmt.io.make_features(batch, 'tgt').to(device)
 
             for j in range(0, target_size-1, trunc_size):
                 # 1. Create truncated target.

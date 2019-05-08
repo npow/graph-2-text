@@ -8,7 +8,7 @@ from torch.nn.utils.rnn import pack_padded_sequence as pack
 from torch.nn.utils.rnn import pad_packed_sequence as unpack
 import onmt
 from onmt.Utils import aeq
-from onmt.my_modules.GCN import GCNLayer
+from onmt.my_modules.GCN import GCNLayer, force_device
 
 def rnn_factory(rnn_type, **kwargs):
     # Use pytorch version when available.
@@ -261,6 +261,7 @@ class GCNEncoder(EncoderBase):
 
 
 
+    @force_device
     def forward(self, src, lengths=None, arc_tensor_in=None, arc_tensor_out=None,
                 label_tensor_in=None, label_tensor_out=None,
                 mask_in=None, mask_out=None,  # batch* t, degree
@@ -789,6 +790,7 @@ class NMTModelGCN(nn.Module):
         self.encoder = encoder
         self.decoder = decoder
 
+    @force_device
     def forward(self, src, tgt, lengths, adj_arc_in, adj_arc_out, adj_lab_in,
                 adj_lab_out, mask_in, mask_out, mask_loop, mask_sent, morph=None,
                 mask_morph=None, dec_state=None):
@@ -841,7 +843,7 @@ class DecoderState(object):
     def detach(self):
         for h in self._all:
             if h is not None:
-                h.detach_()
+                h.detach()
 
     def beam_update(self, idx, positions, beam_size):
         for e in self._all:

@@ -6,6 +6,12 @@ from torch.autograd import Variable
 from torch.nn.utils.rnn import pack_padded_sequence as pack
 from torch.nn.utils.rnn import pad_packed_sequence as unpack
 
+def force_device(f):
+    def wrapper(*args, **kwargs):
+        device = args[1].device
+        return f(args[0], *[x.to(device) if x is not None else x for x in args[1:]])
+    return wrapper
+
 class GCNLayer(nn.Module):
     """ Graph convolutional neural network encoder.
 
@@ -70,11 +76,11 @@ class GCNLayer(nn.Module):
             self.W_self_loop_gate = Parameter(torch.Tensor(self.num_inputs, 1))
             nn.init.xavier_normal(self.W_self_loop_gate)
 
+    @force_device
     def forward(self, src, lengths=None, arc_tensor_in=None, arc_tensor_out=None,
                 label_tensor_in=None, label_tensor_out=None,
                 mask_in=None, mask_out=None,  # batch* t, degree
                 mask_loop=None, sent_mask=None):
-
         if not self.batch_first:
             encoder_outputs = src.permute(1, 0, 2).contiguous()
         else:
