@@ -211,6 +211,10 @@ class Trainer(object):
 
         device = next(self.model.parameters())[0].device
         for batch in valid_iter:
+            for field in batch.input_fields:
+                if not isinstance(batch.__dict__[field], tuple):
+                    batch.__dict__[field] = batch.__dict__[field].to(device)
+
             cur_dataset = valid_iter.get_cur_dataset()
             self.valid_loss.cur_dataset = cur_dataset
 
@@ -300,7 +304,12 @@ class Trainer(object):
         if self.grad_accum_count > 1:
             self.model.zero_grad()
 
+        device = next(self.model.parameters())[0].device
         for batch in true_batchs:
+            for field in batch.input_fields:
+                if not isinstance(batch.__dict__[field], tuple):
+                    batch.__dict__[field] = batch.__dict__[field].to(device)
+
             target_size = batch.tgt.size(0)
             # Truncated BPTT
             if self.trunc_size:
@@ -309,7 +318,6 @@ class Trainer(object):
                 trunc_size = target_size
 
             dec_state = None
-            device = next(self.model.parameters())[0].device
             src = onmt.io.make_features(batch, 'src', self.data_type).to(device)
             if self.data_type == 'text':
                 _, src_lengths = batch.src
