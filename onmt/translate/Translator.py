@@ -257,13 +257,22 @@ class Translator(object):
         #  (i.e. log likelihood) of the target under the model
         tt = torch.cuda if self.cuda else torch
         gold_scores = tt.FloatTensor(batch.batch_size).fill_(0)
-        dec_out, _, _ = self.model.decoder(
+        dec_out, _, attn = self.model.decoder(
             tgt_in, memory_bank, dec_states, memory_lengths=src_lengths)
+
+        def var(a): return Variable(a, volatile=True)
+        def rvar(a): return var(a.repeat(1, self.beam_size, 1))
+
+        src_map = rvar(batch.src_map.data) \
+            if (data_type == 'text' or data_type == 'gcn') and self.copy_attn else None
 
         tgt_pad = self.fields["tgt"].vocab.stoi[onmt.io.PAD_WORD]
         for dec, tgt in zip(dec_out, batch.tgt[1:].data):
             # Log prob of each word.
-            out = self.model.generator.forward(dec)
+            if self.copy_attn:
+                out = self.model.generator.forward(dec, attn["copy"].squeeze(0), src_map)
+            else:
+                out = self.model.generator.forward(dec)
             tgt = tgt.unsqueeze(1)
             scores = out.data.gather(1, tgt)
             scores.masked_fill_(tgt.eq(tgt_pad), 0)
